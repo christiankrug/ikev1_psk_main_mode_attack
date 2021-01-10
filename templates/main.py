@@ -32,9 +32,9 @@ def computeKey(PSK, nonceI, nonceR):
 
 def deriveKeys(key, initCookie, respCookie):
     key_d = hmac.new(key, dhSecret + initCookie + respCookie + bytes.fromhex("00"), digestmod=hashlib.sha1)
-    key_a = hmac.new(key, bytes.fromhex(key_d.hexdigest()) + dhSecret + initCookie + respCookie + bytes.fromhex("01"),
+    key_a = hmac.new(key, key_d.digest() + dhSecret + initCookie + respCookie + bytes.fromhex("01"),
                      digestmod=hashlib.sha1)
-    key_e = hmac.new(key, bytes.fromhex(key_a.hexdigest()) + dhSecret + initCookie + respCookie + bytes.fromhex("02"),
+    key_e = hmac.new(key, key_a.digest() + dhSecret + initCookie + respCookie + bytes.fromhex("02"),
                      digestmod=hashlib.sha1)
     return {"key_d": key_d, "key_a": key_a, "key_e": key_e}
 
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     respKEX = ikeParser.getPayloadFromISAKMP(respKENoncePacket, ikeParser.ISAKMP_KEX_NAME)
     initKEX = ikeParser.getPayloadFromISAKMP(initKENoncePacket, ikeParser.ISAKMP_KEX_NAME)
 
-    aesIV = computeIV(initKEX, respKEX).hexdigest()[0:32]
+    aesIV = computeIV(initKEX, respKEX).digest()[0:16]
     initIDPacket = ikeParser.getInitiatorIdentificationPacket(ikePackets)
     encryptedData = ikeParser.getEncryptedData(initIDPacket)
 
@@ -75,8 +75,8 @@ if __name__ == '__main__':
             # remove newline from string
             line = line.rstrip('\n')
             key = computeKey(bytes(line, encoding='utf8'), initNONCE, respNONCE)
-            keys = deriveKeys(bytes.fromhex(key.hexdigest()), initCookie, respCookie)
-            cipher = AES.new(binascii.unhexlify(keys["key_e"].hexdigest()[0:32]), AES.MODE_CBC, iv=binascii.unhexlify(aesIV))
+            keys = deriveKeys(key.digest(), initCookie, respCookie)
+            cipher = AES.new(keys["key_e"].digest()[0:16], AES.MODE_CBC, iv=aesIV)
             decryptedData = cipher.decrypt(encryptedData)
             if bytesToHex(decryptedData)[0:idLength] == idHex.encode():
                 print("Found our key! "+line)
