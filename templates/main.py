@@ -79,5 +79,5 @@ if __name__ == '__main__':
             cipher = AES.new(keys["key_e"].digest()[0:16], AES.MODE_CBC, iv=aesIV)
             decryptedData = cipher.decrypt(encryptedData)
             if bytesToHex(decryptedData)[0:idLength] == idHex.encode():
-                print("Found our key! "+line)
+                print("Found our key! " + line)
                 break
